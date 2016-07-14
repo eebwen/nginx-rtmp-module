@@ -17,6 +17,8 @@ static void * ngx_rtmp_control_create_loc_conf(ngx_conf_t *cf);
 static char * ngx_rtmp_control_merge_loc_conf(ngx_conf_t *cf,
     void *parent, void *child);
 
+extern ngx_int_t ngx_rtmp_hls_enable(ngx_rtmp_session_t *s);
+extern ngx_int_t ngx_rtmp_hls_disable(ngx_rtmp_session_t *s);
 
 typedef const char * (*ngx_rtmp_control_handler_t)(ngx_http_request_t *r,
     ngx_rtmp_session_t *);
@@ -26,6 +28,7 @@ typedef const char * (*ngx_rtmp_control_handler_t)(ngx_http_request_t *r,
 #define NGX_RTMP_CONTROL_RECORD     0x01
 #define NGX_RTMP_CONTROL_DROP       0x02
 #define NGX_RTMP_CONTROL_REDIRECT   0x04
+#define NGX_RTMP_CONTROL_HLS		0x08
 
 
 enum {
@@ -54,6 +57,7 @@ static ngx_conf_bitmask_t           ngx_rtmp_control_masks[] = {
     { ngx_string("record"),         NGX_RTMP_CONTROL_RECORD    },
     { ngx_string("drop"),           NGX_RTMP_CONTROL_DROP      },
     { ngx_string("redirect"),       NGX_RTMP_CONTROL_REDIRECT  },
+    { ngx_string("hls"),       		NGX_RTMP_CONTROL_HLS	   },
     { ngx_null_string,              0                          }
 };
 
@@ -142,6 +146,35 @@ ngx_rtmp_control_record_handler(ngx_http_request_t *r, ngx_rtmp_session_t *s)
 
     if (rc == NGX_ERROR) {
         return "Recorder error";
+    }
+
+    return NGX_CONF_OK;
+}
+
+static const char *
+ngx_rtmp_control_hls_handler(ngx_http_request_t *r, ngx_rtmp_session_t *s)
+{
+    ngx_int_t                    rc;
+    ngx_rtmp_control_ctx_t      *ctx;
+
+    ctx = ngx_http_get_module_ctx(r, ngx_rtmp_control_module);
+
+    if (ctx->method.len == sizeof("start") - 1 &&
+        ngx_strncmp(ctx->method.data, "start", ctx->method.len) == 0)
+    {
+        rc = ngx_rtmp_hls_enable(s);
+
+    } else if (ctx->method.len == sizeof("stop") - 1 &&
+               ngx_strncmp(ctx->method.data, "stop", ctx->method.len) == 0)
+    {
+        rc = ngx_rtmp_hls_disable(s);
+
+    } else {
+        return "Undefined method";
+    }
+
+    if (rc == NGX_ERROR) {
+        return "Control hls error";
     }
 
     return NGX_CONF_OK;
@@ -472,6 +505,50 @@ error:
     return NGX_HTTP_INTERNAL_SERVER_ERROR;
 }
 
+static ngx_int_t
+ngx_rtmp_control_hls(ngx_http_request_t *r, ngx_str_t *method)
+{
+    ngx_buf_t               *b;
+    const char              *msg;
+    ngx_chain_t              cl;
+    ngx_rtmp_control_ctx_t  *ctx;
+
+    ctx = ngx_http_get_module_ctx(r, ngx_rtmp_control_module);
+    ctx->filter = NGX_RTMP_CONTROL_FILTER_PUBLISHER;
+
+    msg = ngx_rtmp_control_walk(r, ngx_rtmp_control_hls_handler);
+    if (msg != NGX_CONF_OK) {
+        goto error;
+    }
+
+    if (ctx->path.len == 0) {
+        return NGX_HTTP_NO_CONTENT;
+    }
+
+    /* output record path */
+
+    r->headers_out.status = NGX_HTTP_OK;
+    r->headers_out.content_length_n = ctx->path.len;
+
+    b = ngx_create_temp_buf(r->pool, ctx->path.len);
+    if (b == NULL) {
+        goto error;
+    }
+
+    ngx_memzero(&cl, sizeof(cl));
+    cl.buf = b;
+
+    b->last = ngx_cpymem(b->pos, ctx->path.data, ctx->path.len);
+    b->last_buf = 1;
+
+    ngx_http_send_header(r);
+
+    return ngx_http_output_filter(r, &cl);
+
+error:
+    return NGX_HTTP_INTERNAL_SERVER_ERROR;
+}
+
 
 static ngx_int_t
 ngx_rtmp_control_drop(ngx_http_request_t *r, ngx_str_t *method)
@@ -685,6 +762,7 @@ ngx_rtmp_control_handler(ngx_http_request_t *r)
     NGX_RTMP_CONTROL_SECTION(RECORD, record);
     NGX_RTMP_CONTROL_SECTION(DROP, drop);
     NGX_RTMP_CONTROL_SECTION(REDIRECT, redirect);
+	NGX_RTMP_CONTROL_SECTION(HLS, hls);
 
 #undef NGX_RTMP_CONTROL_SECTION
 

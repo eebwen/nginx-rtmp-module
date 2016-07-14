@@ -49,6 +49,7 @@ typedef struct {
 
 
 typedef struct {
+    unsigned                            enable:1;
     unsigned                            opened:1;
 
     ngx_rtmp_mpegts_file_t              file;
@@ -1688,6 +1689,11 @@ ngx_rtmp_hls_audio(ngx_rtmp_session_t *s, ngx_rtmp_header_t *h,
     ngx_buf_t                      *b;
     u_char                         *p;
     ngx_uint_t                      objtype, srindex, chconf, size;
+	
+	if (ngx_rtmp_hls_get_enable_stat(s) == 0) 
+	{
+		return NGX_OK;
+	}
 
     hacf = ngx_rtmp_get_module_app_conf(s, ngx_rtmp_hls_module);
 
@@ -1852,6 +1858,11 @@ ngx_rtmp_hls_video(ngx_rtmp_session_t *s, ngx_rtmp_header_t *h,
     ngx_uint_t                      nal_bytes;
     ngx_int_t                       aud_sent, sps_pps_sent, boundary;
     static u_char                   buffer[NGX_RTMP_HLS_BUFSIZE];
+	
+	if (ngx_rtmp_hls_get_enable_stat(s) == 0) 
+	{
+		return NGX_OK;
+	}
 
     hacf = ngx_rtmp_get_module_app_conf(s, ngx_rtmp_hls_module);
 
@@ -2448,3 +2459,31 @@ ngx_rtmp_hls_postconfiguration(ngx_conf_t *cf)
 
     return NGX_OK;
 }
+
+static ngx_int_t ngx_rtmp_hls_set_enable_stat(ngx_rtmp_session_t *s, ngx_int_t stat) 
+{
+	ctx = ngx_rtmp_get_module_ctx(s, ngx_rtmp_hls_module);
+	return ctx->enable = stat;
+}
+
+static ngx_int_t ngx_rtmp_hls_get_enable_stat(ngx_rtmp_session_t *s)
+{
+	ctx = ngx_rtmp_get_module_ctx(s, ngx_rtmp_hls_module);
+	return ctx->enable;
+}
+
+ngx_int_t ngx_rtmp_hls_enable(ngx_rtmp_session_t *s) 
+{
+	ngx_rtmp_hls_set_enable_stat(s, 1);
+	return ngx_rtmp_hls_open_fragment(s, 0, 1);
+	// ngx_rtmp_hls_set_enable_stat(s, 1);
+}
+
+ngx_int_t ngx_rtmp_hls_disable(ngx_rtmp_session_t *s) 
+{
+	ngx_rtmp_hls_set_enable_stat(s, 0);
+	return ngx_rtmp_hls_close_fragment(s);
+}
+
+
+
