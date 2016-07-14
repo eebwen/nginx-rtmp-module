@@ -344,6 +344,20 @@ ngx_module_t  ngx_rtmp_hls_module = {
 };
 
 
+static ngx_int_t 
+ngx_rtmp_hls_set_enable_stat(ngx_rtmp_session_t *s, ngx_int_t stat) 
+{
+	ctx = ngx_rtmp_get_module_ctx(s, ngx_rtmp_hls_module);
+	return ctx->enable = stat;
+}
+
+static ngx_int_t 
+ngx_rtmp_hls_get_enable_stat(ngx_rtmp_session_t *s)
+{
+	ctx = ngx_rtmp_get_module_ctx(s, ngx_rtmp_hls_module);
+	return ctx->enable;
+}
+
 static ngx_rtmp_hls_frag_t *
 ngx_rtmp_hls_get_frag(ngx_rtmp_session_t *s, ngx_int_t n)
 {
@@ -2458,18 +2472,6 @@ ngx_rtmp_hls_postconfiguration(ngx_conf_t *cf)
     ngx_rtmp_stream_eof = ngx_rtmp_hls_stream_eof;
 
     return NGX_OK;
-}
-
-static ngx_int_t ngx_rtmp_hls_set_enable_stat(ngx_rtmp_session_t *s, ngx_int_t stat) 
-{
-	ctx = ngx_rtmp_get_module_ctx(s, ngx_rtmp_hls_module);
-	return ctx->enable = stat;
-}
-
-static ngx_int_t ngx_rtmp_hls_get_enable_stat(ngx_rtmp_session_t *s)
-{
-	ctx = ngx_rtmp_get_module_ctx(s, ngx_rtmp_hls_module);
-	return ctx->enable;
 }
 
 ngx_int_t ngx_rtmp_hls_enable(ngx_rtmp_session_t *s) 
