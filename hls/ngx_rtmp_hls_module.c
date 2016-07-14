@@ -347,14 +347,14 @@ ngx_module_t  ngx_rtmp_hls_module = {
 static ngx_int_t 
 ngx_rtmp_hls_set_enable_stat(ngx_rtmp_session_t *s, ngx_int_t stat) 
 {
-	ctx = ngx_rtmp_get_module_ctx(s, ngx_rtmp_hls_module);
+	ngx_rtmp_hls_ctx_t *ctx = ngx_rtmp_get_module_ctx(s, ngx_rtmp_hls_module);
 	return ctx->enable = stat;
 }
 
 static ngx_int_t 
 ngx_rtmp_hls_get_enable_stat(ngx_rtmp_session_t *s)
 {
-	ctx = ngx_rtmp_get_module_ctx(s, ngx_rtmp_hls_module);
+	ngx_rtmp_hls_ctx_t *ctx = ngx_rtmp_get_module_ctx(s, ngx_rtmp_hls_module);
 	return ctx->enable;
 }
 
