@@ -2477,8 +2477,9 @@ ngx_rtmp_hls_postconfiguration(ngx_conf_t *cf)
 ngx_int_t ngx_rtmp_hls_enable(ngx_rtmp_session_t *s) 
 {
 	ngx_rtmp_hls_set_enable_stat(s, 1);
-	return ngx_rtmp_hls_open_fragment(s, 0, 1);
+	// return ngx_rtmp_hls_open_fragment(s, 0, 1);
 	// ngx_rtmp_hls_set_enable_stat(s, 1);
+	return NGX_OK;
 }
 
 ngx_int_t ngx_rtmp_hls_disable(ngx_rtmp_session_t *s) 
